@@ -11,7 +11,14 @@ import OrderConfirmation from "./pages/OrderConfirmation";
 function App() {
   return (
     <Routes>
-      {/* Specify the routes here */}
+      <Route path="/" element={<Home />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/products" element={<Products />} />
+      <Route path="/cart" element={<Cart />} />
+      <Route path="/order-confirmation" element={<OrderConfirmation />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

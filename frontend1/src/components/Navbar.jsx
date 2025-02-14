@@ -10,6 +10,17 @@ const Navbar = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     // Implement logout logic here
+    try{
+      const response = await fetch('/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+    }
+    
+
   };
 
   // TODO: Use JSX to create a navigation bar with buttons for:
@@ -19,7 +30,8 @@ const Navbar = () => {
   // - Logout
   return (
     <nav>
-      {/* Implement navigation buttons here */}
+      <button onClick={() => navigate("/")}>Home</button>
+
     </nav>
   );
 };

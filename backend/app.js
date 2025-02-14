@@ -10,10 +10,10 @@ const port = 4000;
 // PostgreSQL connection
 // NOTE: use YOUR postgres username and password here
 const pool = new Pool({
-  user: 'your_username',
+  user: 'yashjonjale',
   host: 'localhost',
   database: 'ecommerce',
-  password: 'your_password',
+  password: 'boomboom123',
   port: 5432,
 });
 
@@ -49,6 +49,11 @@ function isAuthenticated(req, res, next) {
   
 }
 
+function isLoggedIn(req, res, next) {
+  next();
+}
+
+
 // TODO: Implement user signup logic
 // return JSON object with the following fields: {username, email, password}
 // use correct status codes and messages mentioned in the lab document
@@ -66,7 +71,9 @@ app.post("/login", async (req, res) => {
 // TODO: Implement API used to check if the client is currently logged in or not.
 // use correct status codes and messages mentioned in the lab document
 app.get("/isLoggedIn", async (req, res) => {
-
+    if(req.session.user){
+        res.status(200).json({message: "User is logged in"});
+    }
 });
 
 // TODO: Implement API used to logout the user
