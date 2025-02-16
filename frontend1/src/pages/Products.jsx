@@ -56,6 +56,7 @@ const Products = () => {
         credentials: "include", // Include cookies in the request
       });
       const data = await response.json();
+      console.log(data);
       if (response.status === 200) {
         setProducts(data.products);
       } 

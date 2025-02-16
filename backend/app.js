@@ -164,11 +164,12 @@ app.get("/list-products", isAuthenticated, async (req, res) => {
     // query the database for all products
     try{
       const products = await pool.query("SELECT * FROM Products");
+      res.status(200).json({products: products.rows, message: "Products fetched successfully"});
     } catch (err) {
       return res.status(500).json({message: "Error listing products"});
     }
 
-    res.status(200).json({products: products.rows, message: "Products fetched successfully"});
+  
 
 });
 
@@ -258,22 +259,17 @@ app.post("/remove-from-cart", isAuthenticated, async (req, res) => {
     // check if product exists in the cart
     try{
       const cartItem = await pool.query("SELECT * FROM Cart WHERE user_id = $1 AND item_id = $2", [req.session.userId, product_id]);
-    } catch (err) {
-      return res.status(500).json({message: "Error removing item from cart"});
-    }
-
-    if(cartItem.rows.length === 0){
-      return res.status(400).json({message: "Item not present in your cart."});
-    }
-
-    // remove the product from the cart
-    try{
+      if(cartItem.rows.length === 0){
+        return res.status(400).json({message: "Item not present in your cart."});
+      }
+  
       const removedCartItem = await pool.query("DELETE FROM Cart WHERE user_id = $1 AND item_id = $2", [req.session.userId, product_id]);
+      return res.status(200).json({message: "Successfully removed from cart"});
     } catch (err) {
       return res.status(500).json({message: "Error removing item from cart"});
     }
 
-    return res.status(200).json({message: "Successfully removed from cart"});
+   
 
 });
 // TODO: Implement update-cart API which will update the quantity of the product in the cart
@@ -286,52 +282,43 @@ app.post("/update-cart", isAuthenticated, async (req, res) => {
     // check if product exists in the cart
     try{
       const cartItem = await pool.query("SELECT * FROM Cart WHERE user_id = $1 AND item_id = $2", [req.session.userId, product_id]);
+      const product = await pool.query("SELECT * FROM Products WHERE product_id = $1", [product_id]);
+      if(product.rows.length === 0){
+        return res.status(400).json({message: "Error updating cart"});
+      }
+      const prod_quantity = product.rows[0].stock;
+      const cart_quantity = 0;
+      // check if product in cart 
+      if(cartItem.rows.length > 0){
+          cart_quantity = cartItem.rows[0].quantity;
+          if (quantity + cart_quantity < 0){
+            return res.status(400).json({message: "Error updating cart"});
+          }
+          if (quantity + cart_quantity > prod_quantity){
+            return res.status(400).json({message: "Requested quantity exceeds available stock"});
+          }
+          const updatedCartItem = await pool.query("UPDATE Cart SET quantity = $1 WHERE user_id = $2 AND item_id = $3", [quantity, req.session.userId, product_id]);
+        } 
+      else{
+          // if not in cart, add to cart
+  
+          if (quantity < 0){
+            return res.status(400).json({message: "Error updating cart"});
+          }
+          if (quantity > prod_quantity){
+            return res.status(400).json({message: "Requested quantity exceeds available stock"});
+          }
+          const newCartItem = await pool.query("INSERT INTO Cart (user_id, item_id, quantity) VALUES ($1, $2, $3)", [req.session.userId, product_id, quantity]);
+      }
     } catch (err) {
       return res.status(500).json({message: "Error updating cart"});
     }
     // check if quantity is valid with respect to stock
-    try{
-      const product = await pool.query("SELECT * FROM Products WHERE product_id = $1", [product_id]);
-    } catch (err) {
-      return res.status(500).json({message: "Error updating cart"});
-    }
+
     // check if product exists
-    if(product.rows.length === 0){
-      return res.status(400).json({message: "Error updating cart"});
-    }
+    
 
-    const prod_quantity = product.rows[0].stock;
-    const cart_quantity = 0;
-    // check if product in cart 
-    if(cartItem.rows.length > 0){
-        cart_quantity = cartItem.rows[0].quantity;
-        if (quantity + cart_quantity < 0){
-          return res.status(400).json({message: "Error updating cart"});
-        }
-        if (quantity + cart_quantity > prod_quantity){
-          return res.status(400).json({message: "Requested quantity exceeds available stock"});
-        }
-        try{
-          const updatedCartItem = await pool.query("UPDATE Cart SET quantity = $1 WHERE user_id = $2 AND item_id = $3", [quantity, req.session.userId, product_id]);
-        } catch (err) {
-          return res.status(500).json({message: "Error updating cart"});
-        }
-      } 
-    else{
-        // if not in cart, add to cart
 
-        if (quantity < 0){
-          return res.status(400).json({message: "Error updating cart"});
-        }
-        if (quantity > prod_quantity){
-          return res.status(400).json({message: "Requested quantity exceeds available stock"});
-        }
-        try{
-          const newCartItem = await pool.query("INSERT INTO Cart (user_id, item_id, quantity) VALUES ($1, $2, $3)", [req.session.userId, product_id, quantity]);
-        } catch (err) {
-          return res.status(500).json({message: "Error updating cart"});
-        }
-    }
 });
 
 // APIs for placing order and getting confirmation
@@ -351,23 +338,18 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
       Cart.user_id = $1 
       AND 
       Cart.item_id = Products.product_id;`, [req.session.userId]);
-  }
-  catch (err) {
-    return res.status(500).json({ message: "Error placing order" });
-  }
-  if(result.rows.length === 0){
-    return res.status(400).json({message: "Cart is empty"});
-  }
-
-  let sum = Number(0);
-  for(let i =0; i<result.rows.length; i++){
-    if (!result.rows[i].instock){
-      return res.status(400).json({message: "Insufficient stock for ${result.rows[i].name}"});
-    }
-    sum += Number(result.rows[i].total);
-  }
-
-  const order = await pool.query("INSERT INTO Orders (user_id, total_amount) VALUES ($1, $2) RETURNING *", [req.session.userId, sum]);
+      if(result.rows.length === 0){
+        return res.status(400).json({message: "Cart is empty"});
+      }
+    
+      let sum = Number(0);
+      for(let i =0; i<result.rows.length; i++){
+        if (!result.rows[i].instock){
+          return res.status(400).json({message: "Insufficient stock for ${result.rows[i].name}"});
+        }
+        sum += Number(result.rows[i].total);
+      }
+      const order = await pool.query("INSERT INTO Orders (user_id, total_amount) VALUES ($1, $2) RETURNING *", [req.session.userId, sum]);
 
   for(let i =0; i<result.rows.length; i++){
     const orderItem = await pool.query("INSERT INTO OrderItems (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)", [order.rows[0].order_id, result.rows[i].product_id, result.rows[i].quantity, result.rows[i].price]);
@@ -382,28 +364,34 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
   const deleteCart = await pool.query("DELETE FROM Cart WHERE user_id = $1", [req.session.userId]);
 
   return res.status(200).json({message: "Order placed successfully"});
+  }
+  catch (err) {
+    return res.status(500).json({ message: "Error placing order" });
+  }
+ 
+
+  
 });
 
 // API for order confirmation
 // TODO: same as lab4
 app.get("/order-confirmation", isAuthenticated, async (req, res) => {
+
+ 
+
   try {
     const order = await pool.query("SELECT * FROM Orders WHERE user_id = $1 ORDER BY order_id DESC LIMIT 1", [req.session.userId]);
-  } catch (err) {
-    return res.status(500).json({ message: "Error fetching order details" });
-  }
 
-  if(order.rows.length === 0){
-    return res.status(400).json({message: "Order"});
-  }
-
-  try {
+    if(order.rows.length === 0){
+      return res.status(400).json({message: "Order"});
+    }
     const orderItems = await pool.query("SELECT OrderItems.order_id, OrderItems.product_id, OrderItems.quantity, OrderItems.price, Products.name as product_name FROM OrderItems, Products WHERE OrderItems.order_id = $1 AND OrdersItems.order_id = Products.product_id", [order.rows[0].order_id]);
+    res.status(200).json({message: "Order fetched successfully", order: order.rows[0], orderItems: orderItems.rows});
+
   } catch (err) {
     return res.status(500).json({ message: "Error fetching order items" });
   }
 
-  res.status(200).json({message: "Order fetched successfully", order: order.rows[0], orderItems: orderItems.rows});
 });
 
 ////////////////////////////////////////////////////
