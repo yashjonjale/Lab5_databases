@@ -11,6 +11,7 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [quantities, setQuantities] = useState({});
   const [error, setError] = useState("");
+  const [allProducts, setAllProducts] = useState([]);
 
   // TODO: Implement the checkStatus function.
   // This function should check if the user is logged in.
@@ -56,8 +57,8 @@ const Products = () => {
         credentials: "include", // Include cookies in the request
       });
       const data = await response.json();
-      console.log(data);
       if (response.status === 200) {
+        setAllProducts(data.products);
         setProducts(data.products);
       } 
       else if(response.status === 400) {
@@ -71,7 +72,8 @@ const Products = () => {
       }
     } catch (error) {
       console.error("Error fetching products:", error);
-      setError("An error occurred while fetching products. Please try again.");
+      alert("An error occurred while fetching products. Please try again.");
+      navigate("/products");
     }
   };
   
@@ -92,6 +94,7 @@ const Products = () => {
   const addToCart = async (productId) => {
     const quantity = quantities[productId] || 0;
     const product = products.find((p) => p.product_id === productId);
+    console.log(products);
     try {
       const response = await fetch(`${apiUrl}/add-to-cart`, {
         method: "POST",
@@ -99,11 +102,11 @@ const Products = () => {
           "Content-Type": "application/json",
         },
         credentials: "include", // Include cookies in the request
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ product_id: productId, quantity: quantity }),
       });
       const data = await response.json();
       if (response.status === 200) {
-        alert(`Added ${quantity} ${product.product_name} to cart`);
+        alert(`Added ${quantity} ${product.name} to cart`);
       } else {
         alert(data.message);
       }
@@ -119,7 +122,7 @@ const Products = () => {
     // Implement the search logic here
     // use Array.prototype.filter to filter the products
     // that match with the searchTerm
-    const filteredProducts = products.filter((product) =>
+    const filteredProducts = allProducts.filter((product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setProducts(filteredProducts);
@@ -159,7 +162,7 @@ const Products = () => {
               <td>{product.product_id}</td>
               <td>{product.name}</td>
               <td>{product.price}</td>
-              <td>{product.stock}</td>
+              <td>{product.stock_quantity}</td>
               <td>
                 <button onClick={() => handleQuantityChange(product.product_id, -1)}>-</button>
                 {quantities[product.product_id] || 0}

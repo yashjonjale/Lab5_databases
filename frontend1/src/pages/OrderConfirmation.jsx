@@ -14,6 +14,24 @@ const OrderConfirmation = () => {
       // Implement logic here to check if the user is logged in
       // If not, navigate to /login
       // Otherwise, call the fetchOrderConfirmation function
+      try {
+        const response = await fetch(`${apiUrl}/isLoggedIn`, {
+          method: "GET",
+          credentials: "include", // Include cookies in the request
+        });
+        const data = await response.json();
+        if (response.status === 200) {
+          fetchOrderConfirmation();
+        }
+        else{
+          alert(data.message);
+          navigate("/login");
+        }
+      } catch (error) {
+        console.error("Error checking login status:", error);
+        alert("An error occurred while authentication Please try again.");
+        navigate("/login");
+      }
     };
     checkStatus();
   }, []);

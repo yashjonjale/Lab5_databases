@@ -163,7 +163,7 @@ app.post("/logout", (req, res) => {
 app.get("/list-products", isAuthenticated, async (req, res) => {
     // query the database for all products
     try{
-      const products = await pool.query("SELECT * FROM Products");
+      const products = await pool.query("SELECT * FROM Products order by product_id");
       res.status(200).json({products: products.rows, message: "Products fetched successfully"});
     } catch (err) {
       return res.status(500).json({message: "Error listing products"});
@@ -177,9 +177,26 @@ app.get("/list-products", isAuthenticated, async (req, res) => {
 // TODO: impliment add to cart API which will add the quantity of the product specified by the user to the cart
 app.post("/add-to-cart", isAuthenticated, async (req, res) => {
     // extrsact product quantity and product_id
-    let { product_id, quantity } = req.body;
-    quantity = Number(quantity);
-    product_id = Number(product_id);
+    // let { product_id, quantity } = req.body;
+    // quantity = Number(quantity);
+    // product_id = Number(product_id);
+    // console.log(product_id, quantity);
+    // console.log("NOW");
+// const response = await fetch(`${apiUrl}/add-to-cart`, {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         credentials: "include", // Include cookies in the request
+//         body: JSON.stringify({ productId, quantity }),
+//       });
+
+    // as per the above post request, the product_id and quantity are in the body of the request
+
+    const { product_id, quantity } = req.body;
+    console.log(product_id, quantity);
+
+
     // check if product if exists in the database and if it does extract its entry from the products table
     try{
       const product = await pool.query("SELECT * FROM Products WHERE product_id = $1", [product_id]);
@@ -222,7 +239,8 @@ app.get("/display-cart", isAuthenticated, async (req, res) => {
         Products.product_id as product_id,
         Products.name as product_name, Cart.quantity as quantity, 
         Products.price as unit_price, Products.price * Cart.quantity as total_item_price, 
-        CASE WHEN Cart.quantity <= Products.stock_quantity THEN 'YES' ELSE NULL END as instock 
+        CASE WHEN Cart.quantity <= Products.stock_quantity THEN 'YES' ELSE NULL END as instock,
+        Products.stock_quantity as stock_quantity 
         FROM Products, Cart 
         WHERE Cart.user_id = $1 AND Cart.item_id = Products.product_id 
         ORDER BY product_id`, [user_id]);
@@ -385,7 +403,7 @@ app.get("/order-confirmation", isAuthenticated, async (req, res) => {
     if(order.rows.length === 0){
       return res.status(400).json({message: "Order"});
     }
-    const orderItems = await pool.query("SELECT OrderItems.order_id, OrderItems.product_id, OrderItems.quantity, OrderItems.price, Products.name as product_name FROM OrderItems, Products WHERE OrderItems.order_id = $1 AND OrdersItems.order_id = Products.product_id", [order.rows[0].order_id]);
+    const orderItems = await pool.query("SELECT OrderItems.order_id, OrderItems.product_id, OrderItems.quantity, OrderItems.price, Products.name as product_name FROM OrderItems, Products WHERE OrderItems.order_id = $1 AND OrdersItems.product_id = Products.product_id order by OrderItems.product_id", [order.rows[0].order_id]);
     res.status(200).json({message: "Order fetched successfully", order: order.rows[0], orderItems: orderItems.rows});
 
   } catch (err) {
