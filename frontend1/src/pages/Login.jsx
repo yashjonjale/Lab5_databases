@@ -73,8 +73,9 @@ const Login = () => {
       if (response.status === 200) {
         navigate("/dashboard");
       } 
-      else if (response.status === 500){
-        throw new Error(data.message);
+      else{
+        setError(data.message);
+        navigate("/login");
       }
     } catch (error) {
       console.error("Error checking login status:", error);

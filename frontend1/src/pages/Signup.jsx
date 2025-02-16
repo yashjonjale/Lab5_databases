@@ -73,10 +73,11 @@ const Signup = () => {
         navigate("/dashboard");
       } else {
         setError(data.message);
+        navigate("/signup");
       }
     }
     catch{
-      console.error("Error checking login status:", error);
+      console.error(error);
       navigate("/signup");
     }
   };

@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router";
+import { apiUrl } from "../config/config";
 
 const Navbar = () => {
   const navigate = useNavigate(); // Use this to redirect users
@@ -10,7 +11,7 @@ const Navbar = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     // Implement logout logic here
-    const response = await fetch("http:localhost:3000/logout", {
+    const response = await fetch(`${apiUrl}/logout`, {
       method: "POST",
       credentials: "include",
     });
