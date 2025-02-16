@@ -13,11 +13,14 @@ const Login = () => {
     const checkStatus = async () => {
       // Implement your logic here
       try {
+        // return (<div>Checking login status</div>);
+        // console.log("Checking login status");
         const response = await fetch(`${apiUrl}/isLoggedIn`, {
           method: "GET",
           credentials: "include", // Include cookies in the request
         });
         const data = await response.json();
+        // console.log("data", data);
         if (response.status === 200) {
           navigate("/dashboard");
         } 
@@ -31,6 +34,7 @@ const Login = () => {
       }
     };
     checkStatus();
+    // while(true);
   }, []);
 
   // Read about useState to manage form data
@@ -61,6 +65,7 @@ const Login = () => {
     e.preventDefault();
     // Implement the login logic here
     try{
+      console.log("formData", formData);
       const response = await fetch(`${apiUrl}/login`, {
         method: "POST",
         headers: {
@@ -73,14 +78,22 @@ const Login = () => {
       if (response.status === 200) {
         navigate("/dashboard");
       } 
-      else if (response.status === 500){
-        throw new Error(data.message);
+      else{
+        setError(data.message);
+        navigate("/login");
       }
     } catch (error) {
       console.error("Error checking login status:", error);
       alert("An error occurred while authentication Please try again.");
       navigate("/login");
     }
+  };
+
+  const inputStyle = {
+    width: "100%", // Set the width of the input fields to 100% of their parent container
+    padding: "10px",
+    margin: "5px 0",
+    boxSizing: "border-box",
   };
 
   // TODO: Use JSX to create a login form with input fields for:
@@ -119,7 +132,7 @@ const Login = () => {
         <button type="submit">Login</button>
       </form>
       <p>
-        Don't have an account? <a href="/signup">Sign up here</a>
+        Don't haveadcadc an account? <a href="/signup">Sign up here</a>
       </p>
     </div>
   );

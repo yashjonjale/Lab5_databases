@@ -11,6 +11,25 @@ const Cart = () => {
     const checkStatus = async () => {
       // Implement your logic to check if the user is logged in
       // If logged in, fetch the cart data, otherwise navigate to /login
+      
+      // call the isLoggedIn API to check if the user is logged in
+      try {
+        const response = await fetch(`${apiUrl}/isLoggedIn`, {
+          method: "GET",
+          credentials: "include",
+        });
+        const data = await response.json();
+        if (response.status === 200) {
+          fetchCart();
+        } else {
+          throw new Error(data.message);
+        }
+      } catch (error) {
+        console.error("Error checking login status:", error);
+        alert("An error occurred while authentication Please try again.");
+        navigate("/login");
+      }
+
     };
     checkStatus();
   }, []);
@@ -20,6 +39,21 @@ const Cart = () => {
   // totalPrice: Stores the total price of all cart items
   // error: Stores any error messages (if any)
   // message: Stores success or info messages
+
+  // a usestate for storing the cart items in a map
+  // total price of all the items in the cart in a Number variable
+  // error message in a string variable
+
+  const [cart, setCart] = useState([]);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [error, setError] = useState("");
+  // one for storing pincode, street, city, state
+  const [address, setAddress] = useState({
+    pincode: "",
+    street: "",
+    city: "",
+    state: "",
+  });
   
 
   // TODO: Implement the fetchCart function
@@ -27,6 +61,22 @@ const Cart = () => {
   const fetchCart = async () => {
     // Implement your logic to fetch the cart data
     // Use the API endpoint to get the user's cart
+    try {
+      const response = await fetch(`${apiUrl}/display-cart`, {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (response.status === 200) {
+        setCart(data.cart);
+        setTotalPrice(data.totalPrice);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+      setError("An error occurred while fetching cart. Please try again.");
+    }
   };
 
   // TODO: Implement the updateQuantity function

@@ -73,6 +73,7 @@ const Signup = () => {
         navigate("/dashboard");
       } else {
         setError(data.message);
+        navigate("/signup");
       }
     }
     catch{

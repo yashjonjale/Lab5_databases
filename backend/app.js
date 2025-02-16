@@ -68,43 +68,26 @@ app.post('/signup', isLoggedIn, async (req, res) => {
   if (!username || !email || !password) {
     return res.status(500).json({ message: "Error Signing Up" });
   }
-
-  // check if email exists in the database
-//   CREATE TABLE Users (
-//     user_id SERIAL PRIMARY KEY,
-//     username VARCHAR(100) NOT NULL,
-//     email VARCHAR(100) UNIQUE NOT NULL,
-//     password_hash TEXT NOT NULL
-// );
-
-  const user = await pool.query("SELECT * FROM Users WHERE email = $1", [email]);
-
-  if (user.rows.length > 0) {
-    return res.status(400).json({ message: "Error: Email is already registered." });
-  }
-
-  // hash the password using bcrypt
-
-  const saltRounds = 10;
-  const passwordHash = await bcrypt.hash(password, saltRounds);
-
   // insert the user into the database
   try {
+    const user = await pool.query("SELECT * FROM Users WHERE email = $1", [email]);
+
+    if (user.rows.length > 0) {
+      return res.status(400).json({ message: "Error: Email is already registered." });
+    }
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
     const newUser = await pool.query(
       "INSERT INTO Users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING *",
       [username, email, passwordHash]
     );
+    req.session.userId = newUser.rows[0].user_id;
+    return res.status(200).json({ message: "User Registered Successfully", email: email, password: password, username: username });
+
   } catch (err) {
     return res.status(500).json({ message: "Error Signing Up" });
   }
-
-  // add the userId to the session
-
-  req.session.userId = newUser.rows[0].user_id;
-
-
-  return res.status(200).json({ message: "User Registered Successfully", email: email, password: password, username: username });
-});
+  });
 
 // TODO: Implement user signup logic
 // return JSON object with the following fields: {email, password}
@@ -121,15 +104,10 @@ app.post("/login", async (req, res) => {
   // check if email exists in the database
   try {
     const user = await pool.query("SELECT * FROM Users WHERE email = $1", [email]);
-  } catch (err) {
-    return res.status(500).json({ message: "Error Logging In" });
-  }
-
-  if (user.rows.length === 0) {
-    return res.status(400).json({ message: "Invalid credentials" });
-  }
-
-  // check if password is correct
+    if (user.rows.length === 0) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+    // check if password is correct
   const passwordMatch = await bcrypt.compare(password, user.rows[0].password_hash);
 
   if (!passwordMatch) {
@@ -140,6 +118,9 @@ app.post("/login", async (req, res) => {
   req.session.userId = user.rows[0].user_id;
 
   return res.status(200).json({ message: "Login successful", email: email, password: password });
+  } catch (err) {
+    return res.status(500).json({ message: "Error Logging In" });
+  } 
 
 });
 
@@ -151,11 +132,12 @@ app.get("/isLoggedIn", async (req, res) => {
         // query the database for username
         try{
           const user = await pool.query("SELECT * FROM Users WHERE user_id = $1", [req.session.userId]);
+          res.status(200).json({message: "Logged in", username: user.rows[0].username});
         } catch (err) {
           return res.status(500).json({message: "Error checking if user is logged in"});
         }
 
-        res.status(200).json({message: "Logged in", username: user.rows[0].username});
+        
     }
     else{
       res.status(400).json({message: "Not logged in"});
@@ -164,9 +146,10 @@ app.get("/isLoggedIn", async (req, res) => {
 
 // TODO: Implement API used to logout the user
 // use correct status codes and messages mentioned in the lab document
-app.get("/logout", (req, res) => {
+app.post("/logout", (req, res) => {
+  console.log("Logging out");
   req.session.destroy((err) => {
-    if(err){
+    if(err){    
       return res.status(500).json({message: "Failed to log out"});
     }
     res.status(200).json({message: "Logged out successfully"});
@@ -199,56 +182,32 @@ app.post("/add-to-cart", isAuthenticated, async (req, res) => {
     // check if product if exists in the database and if it does extract its entry from the products table
     try{
       const product = await pool.query("SELECT * FROM Products WHERE product_id = $1", [product_id]);
-    } catch (err) {
-      return res.status(500).json({message: "Error adding to cart"});
-    }
-
-    // check if product exists 
-    if(product.rows.length === 0){
-      return res.status(400).json({message: "Invalid Product ID"});
-    }
-
-
-    // valid product and quantity, so insert in the cart
-
-  //   CREATE TABLE Cart (
-  //     user_id INT NOT NULL,
-  //     item_id INT NOT NULL,
-  //     quantity INT NOT NULL CHECK (quantity > 0),
-  //     PRIMARY KEY (user_id, item_id),
-  //     FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
-  //     FOREIGN KEY (item_id) REFERENCES Products(product_id) ON DELETE CASCADE
-  // );
-
-    // if already in cart, update the quantity
-    try{
+      if(product.rows.length === 0){
+        return res.status(400).json({message: "Invalid Product ID"});
+      }
       const cartItem = await pool.query("SELECT * FROM Cart WHERE user_id = $1 AND item_id = $2", [req.session.userId, product_id]);
-    } catch (err) {
-      return res.status(500).json({message: "Error adding to cart"});
-    }
-
-    if(cartItem.rows.length > 0){
+      if(cartItem.rows.length > 0){
         // check user quantity is correct with respect to the stock
         if(cartItem.rows[0].quantity + quantity > product.rows[0].stock){
           return res.status(400).json({message: "Insufficient stock for ${product.rows[0].name}"});
         }
-        try{
-          const updatedCartItem = await pool.query("UPDATE Cart SET quantity = $1 WHERE user_id = $2 AND item_id = $3", [quantity+cartItem.rows[0].quantity, req.session.userId, product_id]);
-        } catch (err) {
-          return res.status(500).json({message: "Error adding to cart"});
-        }
+        const updatedCartItem = await pool.query("UPDATE Cart SET quantity = $1 WHERE user_id = $2 AND item_id = $3", [quantity+cartItem.rows[0].quantity, req.session.userId, product_id]);
     }
     else{
       if (quantity > product.rows[0].stock){
         return res.status(400).json({message: "Insufficient stock for ${product.rows[0].name}"});
       }
-      try{
-        const newCartItem = await pool.query("INSERT INTO Cart (user_id, item_id, quantity) VALUES ($1, $2, $3)", [req.session.userId, product_id, quantity]);
-      } catch (err) {
-        return res.status(500).json({message: "Error adding to cart"});
-      }
+      const newCartItem = await pool.query("INSERT INTO Cart (user_id, item_id, quantity) VALUES ($1, $2, $3)", [req.session.userId, product_id, quantity]);
+
     }
     return res.status(200).json({message: "Successfully added ${quantity} of ${product.rows[0].name} to your cart."});
+
+    
+    } catch (err) {
+      return res.status(500).json({message: "Error adding to cart"});
+    }
+
+
 
 });
 
