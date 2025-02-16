@@ -10,17 +10,21 @@ const Navbar = () => {
   const handleLogout = async (e) => {
     e.preventDefault();
     // Implement logout logic here
-    try{
-      const response = await fetch('/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-    }
-    
+    const response = await fetch("http:localhost:3000/logout", {
+      method: "POST",
+      credentials: "include",
+    });
 
+    if(response.status === 200){
+      navigate("/login");
+    }
+    else{
+      const result = await response.json();
+      const errorMessage = document.createElement("div");
+      errorMessage.style.color = "red";
+      errorMessage.textContent = result.message;
+      document.body.appendChild(errorMessage);
+    }
   };
 
   // TODO: Use JSX to create a navigation bar with buttons for:
@@ -31,7 +35,9 @@ const Navbar = () => {
   return (
     <nav>
       <button onClick={() => navigate("/")}>Home</button>
-
+      <button onClick={() => navigate("/products")}>Products</button>
+      <button onClick={() => navigate("/cart")}>Cart</button>
+      <button onClick={handleLogout}>Logout</button>
     </nav>
   );
 };
