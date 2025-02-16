@@ -77,7 +77,7 @@ const Signup = () => {
       }
     }
     catch{
-      console.error("Error checking login status:", error);
+      console.error(error);
       navigate("/signup");
     }
   };
