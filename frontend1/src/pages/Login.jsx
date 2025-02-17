@@ -90,10 +90,11 @@ const Login = () => {
   };
 
   const inputStyle = {
-    width: "100%", // Set the width of the input fields to 100% of their parent container
+    width: "100%",
     padding: "10px",
     margin: "5px 0",
-    boxSizing: "border-box",
+    border: "1px solid #ccc",
+    borderRadius: "5px",
   };
 
   // TODO: Use JSX to create a login form with input fields for:
@@ -101,9 +102,9 @@ const Login = () => {
   // - Password
   // - A submit button
   return (
-    <div>
-      <h2>Login</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <div style={{ maxWidth: "300px", margin: "auto", textAlign: "left" }}>
+      <h2 style={{ fontSize: "24px", fontWeight: "bold" }}>Login</h2>
+      {error && <p style={{ color: "red", fontSize: "14px" }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <div>
           <input
@@ -129,10 +130,19 @@ const Login = () => {
             style = {inputStyle}
           />
         </div>
-        <button type="submit">Login</button>
+        <button type="submit" 
+            style={{
+            width: "100%",
+            padding: "10px",
+            marginTop: "10px",
+            backgroundColor: "lightgray",
+            border: "none",
+            borderRadius: "5px",
+            fontSize: "16px",
+          }}>Login</button>
       </form>
-      <p>
-        Don't have an account? <a href="/signup">Sign up here</a>
+      <p style={{ marginTop: "10px" }}>
+        Don't have an account? <a href="/signup" style={{ color: "blue", textDecoration: "underline" }}>Sign up here</a>
       </p>
     </div>
   );

@@ -252,7 +252,7 @@ app.get("/display-cart", isAuthenticated, async (req, res) => {
 
         let sum = Number(0);
         for(let i =0; i<result.rows.length; i++){
-          sum += Number(result.rows[i].total);
+          sum += Number(result.rows[i].total_item_price);
         }
 
         res.status(200).json({message: "Cart fetched successfully", cart: result.rows, totalPrice: sum});
@@ -304,29 +304,34 @@ app.post("/update-cart", isAuthenticated, async (req, res) => {
       if(product.rows.length === 0){
         return res.status(400).json({message: "Error updating cart"});
       }
-      const prod_quantity = product.rows[0].stock;
-      const cart_quantity = 0;
+     
+      const prod_quantity = product.rows[0].stock_quantity;
+      let cart_quantity = 0;
       // check if product in cart 
       if(cartItem.rows.length > 0){
           cart_quantity = cartItem.rows[0].quantity;
-          if (quantity + cart_quantity < 0){
-            return res.status(400).json({message: "Error updating cart"});
+          if (quantity + cart_quantity <= 0){
+            const removedCartItem = await pool.query("DELETE FROM Cart WHERE user_id = $1 AND item_id = $2", [req.session.userId, product_id]);
+            return res.status(200).json({message: "Cart updated successfully"});
           }
           if (quantity + cart_quantity > prod_quantity){
             return res.status(400).json({message: "Requested quantity exceeds available stock"});
           }
-          const updatedCartItem = await pool.query("UPDATE Cart SET quantity = $1 WHERE user_id = $2 AND item_id = $3", [quantity, req.session.userId, product_id]);
+          const updatedCartItem = await pool.query("UPDATE Cart SET quantity = $1 WHERE user_id = $2 AND item_id = $3", [quantity + cart_quantity, req.session.userId, product_id]);
+          return res.status(200).json({message: "Cart updated successfully"});
         } 
       else{
           // if not in cart, add to cart
   
-          if (quantity < 0){
-            return res.status(400).json({message: "Error updating cart"});
+          if (quantity + cart_quantity < 0){
+            const removedCartItem = await pool.query("DELETE FROM Cart WHERE user_id = $1 AND item_id = $2", [req.session.userId, product_id]);
+            return res.status(200).json({message: "Cart updated successfully"});
           }
-          if (quantity > prod_quantity){
+          if (quantity + cart_quantity > prod_quantity){
             return res.status(400).json({message: "Requested quantity exceeds available stock"});
           }
-          const newCartItem = await pool.query("INSERT INTO Cart (user_id, item_id, quantity) VALUES ($1, $2, $3)", [req.session.userId, product_id, quantity]);
+          const newCartItem = await pool.query("INSERT INTO Cart (user_id, item_id, quantity) VALUES ($1, $2, $3)", [req.session.userId, product_id, quantity + cart_quantity]);
+          return res.status(200).json({message: "Cart updated successfully"});
       }
     } catch (err) {
       return res.status(500).json({message: "Error updating cart"});
@@ -342,7 +347,7 @@ app.post("/update-cart", isAuthenticated, async (req, res) => {
 // APIs for placing order and getting confirmation
 // TODO: Implement place-order API, which updates the order,orderitems,cart,orderaddress tables
 app.post("/place-order", isAuthenticated, async (req, res) => {
-
+  const {pincode, street, city, state}= req.body;
   try {
     const result = await pool.query(`SELECT 
       Products.product_id as product_id, 
@@ -363,7 +368,7 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
       let sum = Number(0);
       for(let i =0; i<result.rows.length; i++){
         if (!result.rows[i].instock){
-          return res.status(400).json({message: "Insufficient stock for ${result.rows[i].name}"});
+          return res.status(400).json({message: `Insufficient stock for ${result.rows[i].name}`});
         }
         sum += Number(result.rows[i].total);
       }
@@ -371,15 +376,17 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
 
   for(let i =0; i<result.rows.length; i++){
     const orderItem = await pool.query("INSERT INTO OrderItems (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)", [order.rows[0].order_id, result.rows[i].product_id, result.rows[i].quantity, result.rows[i].price]);
+    const updateStock = await pool.query(`UPDATE 
+      Products 
+      SET 
+      stock_quantity = stock_quantity - $1 
+      WHERE 
+      product_id = $2;`, [Number(result.rows[i].quantity), Number(result.rows[i].product_id)]);
   }
-  const updateStock = await pool.query(`UPDATE 
-    Products 
-    SET 
-    stock_quantity = stock_quantity - $1 
-    WHERE 
-    product_id = $2;`, [Number(result.rows[i].quantity), Number(result.rows[i].product_id)]);
+  
 
   const deleteCart = await pool.query("DELETE FROM Cart WHERE user_id = $1", [req.session.userId]);
+  const orderAddress = await pool.query("INSERT INTO OrderAddress (order_id, street, city, state, pincode) VALUES ($1, $2, $3, $4, $5)", [order.rows[0].order_id, street, city, state, pincode]);
 
   return res.status(200).json({message: "Order placed successfully"});
   }
@@ -387,27 +394,23 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
     return res.status(500).json({ message: "Error placing order" });
   }
  
-
-  
 });
 
 // API for order confirmation
 // TODO: same as lab4
 app.get("/order-confirmation", isAuthenticated, async (req, res) => {
 
- 
-
   try {
     const order = await pool.query("SELECT * FROM Orders WHERE user_id = $1 ORDER BY order_id DESC LIMIT 1", [req.session.userId]);
 
     if(order.rows.length === 0){
-      return res.status(400).json({message: "Order"});
+      return res.status(400).json({message: "Order not found"});
     }
-    const orderItems = await pool.query("SELECT OrderItems.order_id, OrderItems.product_id, OrderItems.quantity, OrderItems.price, Products.name as product_name FROM OrderItems, Products WHERE OrderItems.order_id = $1 AND OrdersItems.product_id = Products.product_id order by OrderItems.product_id", [order.rows[0].order_id]);
+    const orderItems = await pool.query("SELECT OrderItems.order_id, OrderItems.product_id, OrderItems.quantity, OrderItems.price, Products.name as product_name FROM OrderItems, Products WHERE OrderItems.order_id = $1 AND OrderItems.product_id = Products.product_id order by OrderItems.product_id", [order.rows[0].order_id]);
     res.status(200).json({message: "Order fetched successfully", order: order.rows[0], orderItems: orderItems.rows});
 
   } catch (err) {
-    return res.status(500).json({ message: "Error fetching order items" });
+    return res.status(500).json({ message: "Error fetching order details" });
   }
 
 });

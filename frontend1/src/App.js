@@ -7,7 +7,7 @@ import Dashboard from "./pages/Dashboard";
 // import NotFound from "./pages/Notfound";
 import Products from "./pages/Products";
 import Cart from "./pages/Cart";
-// import OrderConfirmation from "./pages/OrderConfirmation";
+import OrderConfirmation from "./pages/OrderConfirmation";
 
 function App() {
   return (
@@ -18,7 +18,7 @@ function App() {
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/products" element={<Products />} />
       <Route path="/cart" element={<Cart />} />
-      {/* <Route path="/order-confirmation" element={<OrderConfirmation />} /> */}
+      <Route path="/order-confirmation" element={<OrderConfirmation />} />
       {/* <Route path="*" element={<NotFound />} /> */}
     </Routes>
   );

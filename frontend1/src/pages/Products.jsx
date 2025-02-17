@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import Navbar from "../components/Navbar";
 import { apiUrl } from "../config/config";
+import "../css/Products.css";
 
 const Products = () => {
   const navigate = useNavigate(); // Use this to redirect users
@@ -134,18 +135,19 @@ const Products = () => {
   return (
     <>
       <Navbar />
-      <div>
-        <h1>Product List</h1>
-        <form onSubmit={handleSearch}>
+      <div className="products-container"> {/* Container for styling */}
+        <h1 className="product-list-title">Product List</h1>
+        <form onSubmit={handleSearch} className="search-form">
           <input
             type="text"
             placeholder="Search by product name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
           />
-          <button type="submit">Search</button>
+          <button type="submit" className="search-button">Search</button>
         </form>
-        <table>
+        <table className="product-table">
           <thead>
             <tr>
               <th>Product ID</th>
@@ -157,21 +159,27 @@ const Products = () => {
             </tr>
           </thead>
           <tbody>
-          {products.map((product) => (
-            <tr key={product.product_id}>
-              <td>{product.product_id}</td>
-              <td>{product.name}</td>
-              <td>{product.price}</td>
-              <td>{product.stock_quantity}</td>
-              <td>
-                <button onClick={() => handleQuantityChange(product.product_id, -1)}>-</button>
-                {quantities[product.product_id] || 0}
-                <button onClick={() => handleQuantityChange(product.product_id, 1)}>+</button>
-              </td>
-              <td>
-                <button onClick={() => addToCart(product.product_id)}>Add to Cart</button>
-              </td>
-            </tr>
+            {products.map((product) => (
+              <tr key={product.product_id}>
+                <td>{product.product_id}</td>
+                <td>{product.name}</td>
+                <td>${product.price}</td>
+                <td className={product.stock_quantity > 0 ? 'stock-available' : 'stock-low'}>
+                  {product.stock_quantity}
+                </td>
+                <td>
+                  <div className="quantity-control">
+                    <button onClick={() => handleQuantityChange(product.product_id, -1)}>-</button>
+                    <span>{quantities[product.product_id] || 0}</span>
+                    <button onClick={() => handleQuantityChange(product.product_id, 1)}>+</button>
+                  </div>
+                </td>
+                <td>
+                  <button onClick={() => addToCart(product.product_id)} className="add-to-cart">
+                    Add to Cart
+                  </button>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>

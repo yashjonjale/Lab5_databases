@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { apiUrl } from "../config/config";
+import Navbar from "../components/Navbar";
 import "../css/Cart.css";
 
 const Cart = () => {
@@ -40,7 +41,7 @@ const Cart = () => {
         }
       } catch (error) {
         console.error("Error checking login status:", error);
-        alert("An error occurred while authenticating. Please log in again.");
+        alert(error, "Redirecting to login page.");
         navigate("/login");
       }
     };
@@ -62,16 +63,19 @@ const Cart = () => {
 
       if (response.status === 200) {
         setCart(data.cart || []);
-        setTotalPrice(data.totalPrice || 0);
+        console.log(data.totalPrice);
+        const formattedTotalPrice = parseFloat(data.totalPrice).toFixed(2);
+        setTotalPrice(formattedTotalPrice);
+        // setTotalPrice(data.totalPrice || 0);
         if (data.message && data.cart.length === 0) {
           // e.g. "No items in cart."
-          setMessage(data.message);
+          // setMessage(data.message);
         }
       } else {
         throw new Error(data.message);
       }
     } catch (error) {
-      console.error("Error fetching cart:", error);
+      console.error(error);
       setError("An error occurred while fetching the cart. Please try again.");
     }
   };
@@ -89,7 +93,8 @@ const Cart = () => {
       const newQuantity = currentQuantity + change;
       // Check stock & that newQuantity isn't negative
       if (newQuantity > stockQuantity || newQuantity < 0) {
-        return;
+        alert("Invalid quantity");
+        return
       }
 
       const response = await fetch(`${apiUrl}/update-cart`, {
@@ -98,11 +103,11 @@ const Cart = () => {
         credentials: "include",
         body: JSON.stringify({
           product_id: productId,
-          // Per the API: "quantity" is the *change* (positive or negative).
-          // If your backend expects the final quantity, you can adjust:
           quantity: change,
         }),
       });
+
+      // console.log("response", response);
 
       const data = await response.json();
       if (response.status === 200) {
@@ -113,6 +118,7 @@ const Cart = () => {
       }
     } catch (error) {
       console.error("Error updating quantity:", error);
+      alert(error)
       setError("An error occurred while updating the quantity. Please try again.");
     }
   };
@@ -190,6 +196,7 @@ const Cart = () => {
     const { pincode, street, city, state } = address;
     if (!pincode || !street || !city || !state) {
       setError("Please fill in all the address fields before proceeding.");
+      alert("Please fill in all the address fields before proceeding.");
       return;
     }
 
@@ -215,6 +222,7 @@ const Cart = () => {
       }
     } catch (error) {
       console.error("Error placing order:", error);
+      alert(error);
       setError(error.message || "An error occurred while placing the order.");
     }
   };
@@ -223,126 +231,89 @@ const Cart = () => {
   // Render
   // ----------------------------------------------------------------
   // Display error messages if any error occurs
-  if (error) {
-    return <div className="cart-error">{error}</div>;
-  }
+  // if (error) {
+  //   return <div className="cart-error">{error}</div>;
+  // }
 
   return (
-    <div className="cart-container">
-      <h1>Your Cart</h1>
+    <>
+      <Navbar />
+      <div className="cart-container">
+        <h1>Your Cart</h1>
 
-      {/* Display success or info messages */}
-      {message && <div className="cart-message">{message}</div>}
+        {message && <div className="cart-message">{message}</div>}
 
-      {/* If cart is empty, show message; otherwise show cart table */}
-      {0 != 0 ? (
-        <p className="empty-cart-message">
-          {message || "Your cart is empty"}
-        </p>
-      ) : (
-        <>
-          <table className="cart-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Price</th>
-                <th>Stock Available</th>
-                <th>Quantity</th>
-                <th>Total</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Sort items by product_id before mapping */}
-              {cart
-                // .sort((a, b) => a.product_id - b.product_id)
-                .map((item) => (
+        {cart.length === 0 ? (
+          <p className="empty-cart-message">Your cart is empty</p>
+        ) : (
+          <>
+            <table className="cart-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Price</th>
+                  <th>Stock Available</th>
+                  <th>Quantity</th>
+                  <th>Total</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cart.map((item) => (
                   <tr key={item.item_id}>
                     <td>{item.product_name}</td>
                     <td>${item.unit_price}</td>
-                    {/* We assume the API returns something like stockAvailable. 
-                        Adjust field name if needed. */}
-                    <td>{item.stock_quantity ?? "N/A"}</td>
+                    <td className={item.stock_quantity > 0 ? 'stock-available' : 'stock-low'}>
+                      {item.stock_quantity ?? "N/A"}
+                    </td>
                     <td>
-                      <button
-                        onClick={() =>
-                          updateQuantity(
-                            item.product_id,
-                            -1,
-                            item.quantity,
-                            item.stockAvailable
-                          )
-                        }
-                      >
-                        -
-                      </button>
-                      <span style={{ margin: "0 10px" }}>{item.quantity}</span>
-                      <button
-                        onClick={() =>
-                          updateQuantity(
-                            item.product_id,
-                            1,
-                            item.quantity,
-                            item.stockAvailable
-                          )
-                        }
-                      >
-                        +
-                      </button>
+                      <div className="quantity-control">
+                        <button onClick={() => updateQuantity(item.product_id, -1, item.quantity, item.stock_quantity)}>-</button>
+                        <span>{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.product_id, 1, item.quantity, item.stock_quantity)}>+</button>
+                      </div>
                     </td>
                     <td>${item.total_item_price}</td>
                     <td>
-                      <button onClick={() => removeFromCart(item.product_id)}>
+                      <button onClick={() => removeFromCart(item.product_id)} className="remove-button">
                         Remove
                       </button>
                     </td>
                   </tr>
                 ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
 
-          {/* Address form */}
-          <div className="address-form">
-            <h2>Delivery Address</h2>
-            <div className="form-group">
-              <label>Pincode</label>
-              <input
-                type="text"
-                value={address.pincode}
-                onChange={handlePinCodeChange}
-              />
+            <div className="address-form">
+              <h2>Delivery Address</h2>
+              <div className="form-group">
+                <label>Pincode</label><br />
+                <input type="text" value={address.pincode} onChange={handlePinCodeChange} />
+              </div>
+              <div className="form-group">
+                <label>Street</label><br />
+                <input type="text" value={address.street} onChange={(e) => setAddress({ ...address, street: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label>City</label><br />
+                <input type="text" value={address.city} disabled />
+              </div>
+              <div className="form-group">
+                <label>State</label><br />
+                <input type="text" value={address.state} disabled />
+              </div>
             </div>
-            <div className="form-group">
-              <label>Street</label>
-              <input
-                type="text"
-                value={address.street}
-                onChange={(e) =>
-                  setAddress({ ...address, street: e.target.value })
-                }
-              />
-            </div>
-            {/* city & state must not be editable */}
-            <div className="form-group">
-              <label>City</label>
-              <input type="text" value={address.city} disabled />
-            </div>
-            <div className="form-group">
-              <label>State</label>
-              <input type="text" value={address.state} disabled />
-            </div>
-          </div>
 
-          {/* Total Price & Checkout Button */}
-          <div className="cart-total">
-            <h3>Total: ${totalPrice}</h3>
-            <button onClick={handleCheckout} disabled={cart.length === 0}>
-              Proceed to Checkout
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+            <div className="cart-total">
+              <h3>Total: ${totalPrice}</h3>
+              <button onClick={handleCheckout} disabled={cart.length === 0} className="checkout-button">
+                Proceed to Checkout
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 };
 

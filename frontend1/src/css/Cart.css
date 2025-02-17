@@ -1,1 +1,105 @@
 /* You can add css here for the cart page. This is completely optional */
+/* Cart.css */
+.cart-container {
+    padding: 20px;
+    font-family: sans-serif;
+  }
+  
+  .cart-message {
+    background-color: #d4edda; /* Light green */
+    color: #155724; /* Dark green */
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+  }
+  
+  .empty-cart-message {
+    text-align: center;
+    font-style: italic;
+    color: #777;
+  }
+  
+  .cart-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  
+  .cart-table th, .cart-table td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  
+  .stock-available {
+    color: green;
+  }
+  
+  .stock-low {
+    color: red;
+  }
+  
+  .quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  
+  .quantity-control button {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .address-form {
+    margin-bottom: 20px;
+  }
+  
+  .address-form h2 {
+    margin-bottom: 10px;
+  }
+  
+  .form-group {
+    margin-bottom: 10px;
+  }
+  
+  .form-group label {
+    display: block; /* Make labels stack on top of inputs */
+    margin-bottom: 5px;
+  }
+  
+  .form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Include padding and border in element's total width and height */
+  }
+  
+  .cart-total {
+    display: flex;
+    justify-content: space-between; /* Align items on opposite ends */
+    align-items: center;
+  }
+  
+  .cart-total h3 {
+    margin: 0; /* Remove default margin for h3 */
+  }
+  
+  .remove-button, .checkout-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .remove-button {
+    background-color: #dc3545; /* Red */
+    color: white;
+  }
+  
+  .checkout-button {
+    background-color: #28a745; /* Green */
+    color: white;
+  }
