@@ -95,7 +95,7 @@ const Products = () => {
   const addToCart = async (productId) => {
     const quantity = quantities[productId] || 0;
     const product = products.find((p) => p.product_id === productId);
-    console.log(products);
+    // console.log(products);
     try {
       const response = await fetch(`${apiUrl}/add-to-cart`, {
         method: "POST",

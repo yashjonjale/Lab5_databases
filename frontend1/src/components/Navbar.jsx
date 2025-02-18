@@ -14,7 +14,7 @@ const Navbar = () => {
       method: "POST",
       credentials: "include",
     });
-    console.log(response);
+    // console.log(response);
     if(response.status === 200){
       navigate("/login");
     }

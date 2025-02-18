@@ -72,7 +72,7 @@ const OrderConfirmation = () => {
 
   return (
     <>
-    <Navbar />
+      <Navbar />
       <div className="order-confirmation-container">
         <h2 className="order-confirmation-title">Order Confirmation</h2>
         {error && <p className="error-message">{error}</p>}
@@ -81,8 +81,7 @@ const OrderConfirmation = () => {
             <p>Thank you for your order! Your order has been successfully placed.</p>
             <div className="order-details">
               <p><strong>Order ID:</strong> {orderDetails.order.order_id}</p>
-              <p><strong>Order Date:</strong> {orderDetails.order.order_date}</p>
-              
+              <p><strong>Order Date:</strong> {new Date(orderDetails.order.order_date).toLocaleString('en-GB', { hour12: false })}</p>
               <p><strong>Total Amount:</strong> ${orderDetails.order.total_amount}</p>
             </div>
             <h3>Items in Your Order:</h3>

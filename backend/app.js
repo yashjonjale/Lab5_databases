@@ -147,7 +147,7 @@ app.get("/isLoggedIn", async (req, res) => {
 // TODO: Implement API used to logout the user
 // use correct status codes and messages mentioned in the lab document
 app.post("/logout", (req, res) => {
-  console.log("Logging out");
+  // console.log("Logging out");
   req.session.destroy((err) => {
     if(err){    
       return res.status(500).json({message: "Failed to log out"});
@@ -194,7 +194,7 @@ app.post("/add-to-cart", isAuthenticated, async (req, res) => {
     // as per the above post request, the product_id and quantity are in the body of the request
 
     const { product_id, quantity } = req.body;
-    console.log(product_id, quantity);
+    // console.log(product_id, quantity);
 
 
     // check if product if exists in the database and if it does extract its entry from the products table
@@ -206,19 +206,19 @@ app.post("/add-to-cart", isAuthenticated, async (req, res) => {
       const cartItem = await pool.query("SELECT * FROM Cart WHERE user_id = $1 AND item_id = $2", [req.session.userId, product_id]);
       if(cartItem.rows.length > 0){
         // check user quantity is correct with respect to the stock
-        if(cartItem.rows[0].quantity + quantity > product.rows[0].stock){
-          return res.status(400).json({message: "Insufficient stock for ${product.rows[0].name}"});
+        if(cartItem.rows[0].quantity + quantity > product.rows[0].stock_quantity){
+          return res.status(400).json({message: `Insufficient stock for ${product.rows[0].name}`});
         }
         const updatedCartItem = await pool.query("UPDATE Cart SET quantity = $1 WHERE user_id = $2 AND item_id = $3", [quantity+cartItem.rows[0].quantity, req.session.userId, product_id]);
     }
     else{
-      if (quantity > product.rows[0].stock){
-        return res.status(400).json({message: "Insufficient stock for ${product.rows[0].name}"});
+      if (quantity > product.rows[0].stock_quantity){
+        return res.status(400).json({message: `Insufficient stock for ${product.rows[0].name}`});
       }
       const newCartItem = await pool.query("INSERT INTO Cart (user_id, item_id, quantity) VALUES ($1, $2, $3)", [req.session.userId, product_id, quantity]);
 
     }
-    return res.status(200).json({message: "Successfully added ${quantity} of ${product.rows[0].name} to your cart."});
+    return res.status(200).json({message: `Successfully added ${quantity} of ${product.rows[0].name} to your cart.`});
 
     
     } catch (err) {
@@ -349,13 +349,18 @@ app.post("/update-cart", isAuthenticated, async (req, res) => {
 app.post("/place-order", isAuthenticated, async (req, res) => {
   const {pincode, street, city, state}= req.body;
   try {
+    // console.log(street)
+    // console.log(city)
+    // console.log(state)
+    // console.log(pincode)
     const result = await pool.query(`SELECT 
       Products.product_id as product_id, 
       Products.name as name, 
       Cart.quantity as quantity, 
       Products.price as price, 
       Products.price*Cart.quantity as total, 
-      case when Cart.quantity <= Products.stock_quantity then \'YES\' else NULL end as instock 
+      case when Cart.quantity <= Products.stock_quantity then \'YES\' else NULL end as instock,
+      Products.stock_quantity as stock_quantity 
       FROM Products, Cart 
       WHERE 
       Cart.user_id = $1 
@@ -373,7 +378,8 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
         sum += Number(result.rows[i].total);
       }
       const order = await pool.query("INSERT INTO Orders (user_id, total_amount) VALUES ($1, $2) RETURNING *", [req.session.userId, sum]);
-
+      
+      // console.log(order.rows[0].order_id);
   for(let i =0; i<result.rows.length; i++){
     const orderItem = await pool.query("INSERT INTO OrderItems (order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4)", [order.rows[0].order_id, result.rows[i].product_id, result.rows[i].quantity, result.rows[i].price]);
     const updateStock = await pool.query(`UPDATE 
@@ -382,8 +388,8 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
       stock_quantity = stock_quantity - $1 
       WHERE 
       product_id = $2;`, [Number(result.rows[i].quantity), Number(result.rows[i].product_id)]);
-  }
-  
+    }
+    
 
   const deleteCart = await pool.query("DELETE FROM Cart WHERE user_id = $1", [req.session.userId]);
   const orderAddress = await pool.query("INSERT INTO OrderAddress (order_id, street, city, state, pincode) VALUES ($1, $2, $3, $4, $5)", [order.rows[0].order_id, street, city, state, pincode]);
@@ -401,7 +407,7 @@ app.post("/place-order", isAuthenticated, async (req, res) => {
 app.get("/order-confirmation", isAuthenticated, async (req, res) => {
 
   try {
-    const order = await pool.query("SELECT * FROM Orders WHERE user_id = $1 ORDER BY order_id DESC LIMIT 1", [req.session.userId]);
+    const order = await pool.query("SELECT order_id, order_date, total_amount FROM Orders WHERE user_id = $1 ORDER BY order_id DESC LIMIT 1", [req.session.userId]);
 
     if(order.rows.length === 0){
       return res.status(400).json({message: "Order not found"});

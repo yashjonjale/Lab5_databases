@@ -65,7 +65,7 @@ const Login = () => {
     e.preventDefault();
     // Implement the login logic here
     try{
-      console.log("formData", formData);
+      // console.log("formData", formData);
       const response = await fetch(`${apiUrl}/login`, {
         method: "POST",
         headers: {

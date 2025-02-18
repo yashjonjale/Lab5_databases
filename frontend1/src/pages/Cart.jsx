@@ -63,7 +63,7 @@ const Cart = () => {
 
       if (response.status === 200) {
         setCart(data.cart || []);
-        console.log(data.totalPrice);
+        // console.log(data.totalPrice);
         const formattedTotalPrice = parseFloat(data.totalPrice).toFixed(2);
         setTotalPrice(formattedTotalPrice);
         // setTotalPrice(data.totalPrice || 0);
@@ -92,7 +92,7 @@ const Cart = () => {
     try {
       const newQuantity = currentQuantity + change;
       // Check stock & that newQuantity isn't negative
-      if (newQuantity > stockQuantity || newQuantity < 0) {
+      if ( (change > 0 && newQuantity > stockQuantity) || newQuantity < 0) {
         alert("Invalid quantity");
         return
       }
@@ -197,6 +197,11 @@ const Cart = () => {
     if (!pincode || !street || !city || !state) {
       setError("Please fill in all the address fields before proceeding.");
       alert("Please fill in all the address fields before proceeding.");
+      return;
+    }
+    if (pincode.length !== 6) {
+      setError("Please enter a valid 6-digit pincode.");
+      alert("Please enter a valid 6-digit pincode.");
       return;
     }
 
